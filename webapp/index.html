@@ -315,6 +315,12 @@
           <b-container v-if="typeof(stageLive.intensityStr) !== 'undefined'" style="position: relative" >
             <b-row>
               <b-col cols="12" sm="5" md="5" lg="5"  style="margin-top: auto; margin-bottom: auto">
+                
+                <h4>Audio Auto
+                  <b-button size="sm" class="my-1" style="float: right;" @click="setAudioMixControlled(1), setRemoteControlled(0)">On</b-button>   
+                  <b-button size="sm" class="my-1" style="float: right; margin-right:5px" @click="setAudioMixControlled(0), setRemoteControlled(1)">Off</b-button>  
+                </h4>
+
                 <h4>Intensity {{stageLive.intensityStr}}                  
 
                   <b-button size="sm" class="my-1" style="float: right;" @click="setStageLiveIntensity(100)">Full</b-button>   
@@ -878,6 +884,14 @@
 
             setStageLiveSpeed: function(value) {                            
               this.apiPost("stages/"+this.stage.id+"/live?speed="+this.scaleSpeed(value), function(){}.bind(this));
+            },            
+            
+            setAudioMixControlled: function(value) {                            
+              this.apiPost("stages/"+this.stage.id+"/live?audioMixControlled="+value, function(){}.bind(this));
+            },            
+            
+            setRemoteControlled: function(value) {                            
+              this.apiPost("stages/"+this.stage.id+"/live?remotelyControlled="+value, function(){}.bind(this));
             },            
 
             onPlaylistPrevious: function(playlist) {
