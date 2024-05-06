@@ -1,0 +1,16 @@
+To host a static custom web page using ENTTEC LED Mapper within the software navigate to:
+
+
+    Settings > Remote > HTTP
+
+    Enable HTTP using the 'ON/OFF' switch.
+
+
+        Navigate to the 'Static Content' field once HTTP is enabled.
+
+        Press the 'Browse' button to be directed to the file system.
+        Place your own webpages, or extract the contents from the 'ELM Example Web Interface.zip' example into the '/webapp' folder.
+
+     Once all content has been coppied into the '/webapp' folder restart the ELM software.
+
+     Using your web-browser navigate to: http://<your IP_Adress>/elm/webapp/ in order to view the files.

@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>    
+    <meta charset="utf-8">
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">    
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">    
+    <link rel="shortcut icon" href="app.ico" />
+    <link rel="apple-touch-startup-image" href="splashscreen.png">    
+
+    <meta name="theme-color" content="#000000">
+    <meta name="msapplication-navbutton-color" content="#000000">    
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-touch-fullscreen" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <title>Loomx ELM Remote</title>
+
+    <!-- Required Stylesheets -->
+    <link type="text/css" rel="stylesheet" href="css/bootstrap.min.css"/>
+    <link type="text/css" rel="stylesheet" href="css/bootstrap-vue.css"/>
+    <link type="text/css" rel="stylesheet" href="css/vue-slider-component.css"/>
+
+    <style scoped>
+      pre {white-space: pre-wrap;word-break: normal; color: white}
+
+      @media print {
+        .bg-dark {background-color: white !important;}
+        .text-white {color: black !important;}
+        .btn {display: none;}
+        .table-dark {color: black;}
+
+        pre {color: black};
+      }
+
+      .vc-alpha-container,.vc-alpha-gradient, .vc-checkerboard  {display: none;}
+      
+
+
+.overlay {
+  position: absolute;
+  padding: 5px;
+  min-width: 30px;
+  text-align: center;
+  color: white;
+  white-space: nowrap; /* Prevents text from wrapping */
+  overflow: hidden; /* Prevents text from expanding the overlay size */
+  text-overflow: ellipsis; /* Adds an ellipsis if the text is too long */
+}
+
+.bottom-overlay {
+  bottom: 0;
+  left: 0;
+  right: 0; /* Ensures full width coverage */
+  background-color: rgba(0, 0, 0, 0.8);
+  margin: 0;
+}
+
+.selected-overlay {
+  background-color: rgba(0, 159, 223, 0.8);
+}
+
+.top-overlay {
+  top: 0;
+  left: 0;
+  right: 0; /* Ensures full width coverage */
+  background-color: rgba(255, 0, 0, 0.8);
+}
+
+.b-img {
+  display: block; /* Ensures the image is block level to fill the button */
+  width: 100%; /* Ensures the image fills the button width */
+  height: auto; /* Maintains the aspect ratio */
+}
+
+
+    </style>
+
+    <!-- Required scripts -->
+    <script src="js/vue.min.js"></script>
+    <script src="js/polyfill.min.js"></script>
+    <script src="js/bootstrap-vue.js"></script>
+    <script src="js/vue-resource.js"></script>    
+    <script src="js/vue-color.min.js"></script>
+    <script src="js/vue-slider-component.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@jaames/iro@5.5.1/dist/iro.min.js"></script>
+
+
+  </head>
+
+  <body class="bg-dark">
+    <!-- Our application root element -->
+    <div id="app">
+      <b-navbar toggleable="md" variant="dark" type="dark" variant="info">
+
+          <b-navbar-toggle target="nav_collapse"></b-navbar-toggle>
+
+          <b-navbar-brand href="#home"><img src="LogoBWt.png" alt="" style="width: 100px;"></b-navbar-brand>
+
+          <b-collapse is-nav id="nav_collapse">
+
+            <b-navbar-nav>
+              <b-nav-item v-for="item in menuItems" :key="item.href" :active="item.isSelected" :href="item.href" @click="onMenuItemClicked">{{item.text}}</b-nav-item>              
+              
+              <b-button href="javascript:requestFullscreen()" size="sm" style="margin-right: 5px; margin-left: 5px" class="my-1">Fullscreen</b-button>
+              <b-button href="javascript:location.reload()" size="sm" style="margin-right: 5px; margin-left: 5px" class="my-1">Refresh</b-button>
+        
+            </b-navbar-nav>
+           
+          </b-collapse>
+      </b-navbar>
+
+      <b-alert variant="danger" :show="wrongELMVersion">
+          ELM version {{minELMVersion}} is needed. Please update ELM.
+      </b-alert>
+
+      <b-alert variant="danger" :show="unableToConnect">
+          Unable to connect to ELM. Please check that it is running and that the HTTP remote is enabled.
+      </b-alert>
+
+      <b-alert variant="danger" :show="needToRefresh">
+          Page refresh needed. Some elements have changed and the page needs to be reloaded.
+      </b-alert>
+
+       <b-alert variant="danger" :show="unauthorized">
+          A user name and password is required.
+      </b-alert>
+
+       <b-container style="position:fixed; top:0px; z-index: 900">
+        <b-alert :show="successDismissCountDown"
+           dismissible
+           variant="success"
+           @dismissed="successDismissCountDown=0">
+            {{successMessage}}        
+        </b-alert>
+
+        <b-alert :show="errorDismissCountDown"
+           dismissible
+           variant="danger"
+           @dismissed="errorDismissCountDown=0">                
+            {{errorMessage}}            
+        </b-alert>
+      </b-container>
+
+      <b-container fluid class="p-2 bg-dark text-white" v-if="nav=='#home'">                       
+        <b-row>
+           <b-col cols="12" sm="12" md="12" lg="12" class="my-2">             
+              <div><h5>Project name</h5>{{status.projectName}}</div>          
+          </b-col>
+           <b-col cols="6" sm="4" md="3" lg="3" class="my-2">
+              <div><h5>Output rate</h5>{{status.outputRate}}fps</div>
+          </b-col>
+          <b-col cols="6" sm="4" md="3" lg="3" class="my-2">
+             <div><h5>DMX output</h5>{{status.isDMXOutputActive? 'Yes' : 'No'}}</div>
+          </b-col>
+           <b-col cols="6" sm="4" md="3" lg="3" class="my-2">
+             <div><h5>DMX universes</h5>{{status.nbDMXUniverses}}</div>
+          </b-col>
+        </b-row>
+        
+        <b-list-group  class="text-dark">
+
+            <b-list-group-item v-for="item in status.subsystems" :key="item.name" class="d-flex justify-content-between align-items-center">              
+              
+              <div >
+                <h5 class="mb-1">{{item.name}}</h5>
+                <small>{{item.status}}</small>
+              </div>
+
+              <b-badge :variant="(item.hasErrors?'danger':(item.hasWarnings?'warning':item.isActive?'success':'secondary'))"  pill>
+                &nbsp
+              </b-badge>
+              
+            </li>
+          </b-list-group>
+          <h6 class="m-2">ELM version {{status.appVersion}}</h5>
+
+      </b-container>
+
+      <b-container fluid class="p-2 bg-dark text-white" v-if="nav=='#media'">
+          <b-alert variant="info" :show="images.length==0">
+            No media. The library is empty.
+          </b-alert>
+<!-- media grid - medias tab -->
+          <b-row>
+             <!-- <b-col cols="4" sm="3" md="2" lg="1" v-for="item in images" :key="item.id">
+              <p style="position:absolute; padding:5px; min-width: 30px; text-align: center; bottom:0px; margin-bottom:8px; background-color: rgba(0,0,0,0.8);">{{item.id}}</p>
+              <p v-if="item.hasErrors" style="position:absolute; padding:5px; min-width: 30px; text-align: center; top:0px; margin-top:8px; background-color: rgba(255,0,0,0.8);" v-b-popover.hover="item.status">!</p>          
+              <b-img :src="item.src" fluid-grow blank-color="#bbb" :alt="item.name" :title="item.name" class="my-2"
+                v-b-popover.hover="item.details"></b-img>
+                
+              
+            </b-col> -->
+            <b-col cols="3" sm="4" md="3" lg="2" v-for="item in images" :key="item.id">
+              <b-button @click="selectStageLiveMedia(item)" class="p-0 my-2 position-relative d-block text-none image-button">
+                <!-- ID Overlay, changes color if selected -->
+                <p class="overlay bottom-overlay" :class="{'selected-overlay': item.id === stageLive.image.id}">
+                  {{ item.name }}
+                </p>
+                <!-- Error Indicator -->
+                <p v-if="item.hasErrors" class="overlay top-overlay" v-b-popover.hover="item.status">!</p>          
+                <!-- Image with popover for details -->
+                <b-img :src="item.src" fluid-grow blank-color="#bbb" :alt="item.name" :title="item.name" v-b-popover.hover="item.details"></b-img>
+              </b-button>
+            </b-col>
+
+            <b-col cols="4" sm="3" md="2" lg="1" v-for="item in images" :key="item.id" class="position-relative">
+              <p style="position:absolute; padding:5px; min-width: 30px; text-align: center; bottom:0; margin-bottom:8px; background-color: rgba(0,0,0,0.8); color: white;">
+                  {{ item.id }}
+              </p>
+              <p v-if="item.hasErrors" style="position:absolute; padding:5px; min-width: 30px; text-align: center; top:0; margin-top:8px; background-color: rgba(255,0,0,0.8);" v-b-popover.hover="item.status">
+                  !
+              </p>
+              <b-img :src="item.src" fluid-grow blank-color="#bbb" :alt="item.name" :title="item.name" class="my-2" v-b-popover.hover="item.details"></b-img>
+              <p style="position:absolute; padding:5px; width:100%; text-align: center; top:0; color: white; background-color: rgba(0,0,0,0.5);">
+                  {{ item.name }}
+              </p>
+          </b-col>
+          
+          </b-row>
+
+          <p><b-button  href="#media-edit" style="margin-top:20px">edit</b-button></p>
+
+      </b-container>
+
+       <b-container fluid class="p-2  text-white" v-if="nav=='#media-edit'">
+          <b-alert variant="info" :show="images.length==0">
+            No media. The library is empty.
+          </b-alert>
+         
+          <b-modal    id="uploadMediaFileModal" style="color: black"
+                      v-model="isUploadMediaFileModalVisible" title="Media Update"
+                      @ok="postMediaFile" :busy="isWorking">
+            <b-form name="1" @submit.stop.prevent="postMediaFile" v-show="!isWorking" >
+                <b-form-file v-model="mediaFile" :state="Boolean(mediaFile)" required
+                  accept=".mov, .wmv, .mpg, .mp4, .avi, .mkv, .webm, .ogv, .ogg, .mp2, .mpeg, .bmp, .jpg, .png, .gif, .tiff" 
+                  placeholder="Choose a media file..."></b-form-file>                
+            </b-form>
+            <p v-if="isWorking">Transferring your file...</p>
+            <b-progress :value="uploadMediaFileProgress" :max="100" animated v-if="isWorking"></b-progress>
+          </b-modal>
+
+          <b-button size="sm" :pressed.sync="showEmptySlots" variant="outline-primary">Show empty slots</b-button>
+        
+          <ul class="list-unstyled list-group list-group-hover list-group-striped" >            
+            <b-media v-if="item.src != '' || showEmptySlots" tag="li" v-for="item in imagesWithEmptySlots" :key="item.id"  class="m-2" >   
+              <span slot="aside" style="position:relative">
+                <p style="position: absolute;  padding:5px; min-width: 30px; text-align: center; bottom: 0px; margin:0px; background-color: rgba(0,0,0,0.8);">{{item.id}}</p>
+                <p v-if="item.hasErrors" style="position:absolute; padding:5px; min-width: 30px; text-align: center; top:0px; background-color: rgba(255,0,0,0.8);" v-b-popover.hover="item.status">!</p> 
+                <b-img :src="item.src" width="128" style="max-height:128px" :blank="item.src==''" blank-color="#bbb" :alt="item.name"></b-img>
+              </span>                    
+              <p class="mt-0 mb-0">{{item.name}}</p>
+              <small>{{item.details}}</small>
+              <p><b-button size="sm" @click="selectFileForMedia(item)">change</b-button></p>
+            </b-media>
+          </ul>
+     
+      </b-container>
+
+
+      <b-container fluid class="p-2 bg-dark text-white" v-if="nav=='#playlists'">
+          <b-alert variant="info" :show="stages.length==0">
+            No stages. Please create at least one stage in ELM.
+          </b-alert>          
+          
+          <b-dropdown size="lg" :text="stage.name" class="m-2">
+            <b-dropdown-item-button v-for="item in stages" :key="item.name" @click="onStageSelected(item)" >{{item.name}}
+            </b-dropdown-item-button>
+          </b-dropdown>            
+          <h4 class="m-2" :show="stages.length>0">
+            <span class="text-monospace" style="margin-right: 10px">{{schedulerTime}}</span>
+            <b-button size="success lg" @click="onSchedulerStart()" style="margin-right:7px">start</b-button>         
+            <b-button size="danger lg" @click="onSchedulerStop()" style="margin-right:7px">stop</b-button>    
+            <b-button size="md" :pressed.sync="applyToAllStages" alt="Execute the action on all stages at once." variant="outline-primary">Apply to all stages</b-button>        
+          </h4>
+        
+          <b-list-group  class="text-dark">
+            <b-list-group-item v-for="item in stagePlaylists" :key="item.name" class="d-flex justify-content-between align-items-center">              
+              
+              <div >
+                <h5 class="mb-1">{{item.name}}</h5>
+                <small>{{item.daysStr}} <span class="text-monospace">{{item.startTimeStr !== "" ? "@":""}}{{item.startTimeStr}}</span></small>
+              </div>
+
+              <b-badge variant="success" v-if="item.running==1">
+                <span class="text-monospace">{{item.runningTimeStr}}</span>&nbsp;
+                {{item.curItemIndex+1}}/{{item.nbItems}}                 
+                <b-button @click="onPlaylistPrevious(item)">&lt;</b-button>
+                <b-button @click="onPlaylistNext(item)">&gt;</b-button>                
+              </b-badge>
+
+               <b-badge variant="light" v-if="item.running==0">                
+                <b-button @click="onPlaylistStart(item)">&gt;</b-button>                
+              </b-badge>
+            </li>
+          </b-list-group>
+
+           <b-alert variant="info" :show="stagePlaylists.length==0">
+            No playlists for this stage.
+          </b-alert> 
+
+      </b-container>
+
+       <b-container fluid class="p-2 bg-dark text-white" v-if="nav=='#live'">
+          <b-alert variant="info" :show="stages.length==0">
+            No stages. Please create at least one stage in ELM.
+          </b-alert>          
+        
+          <b-dropdown size="lg" :text="stage.name" class="m-2">
+            <b-dropdown-item-button v-for="item in stages" :key="item.name" @click="onStageSelected(item)" >{{item.name}}</b-dropdown-item-button>           
+          </b-dropdown>
+          <small :show="stageLive.mode !== ''">{{stageLive.mode}}</small>
+
+          <b-container v-if="typeof(stageLive.intensityStr) !== 'undefined'" style="position: relative" >
+            <b-row>
+              <b-col cols="12" sm="5" md="5" lg="5"  style="margin-top: auto; margin-bottom: auto">
+                <h4>Intensity {{stageLive.intensityStr}}                  
+
+                  <b-button size="sm" class="my-1" style="float: right;" @click="setStageLiveIntensity(100)">Full</b-button>   
+                  <b-button size="sm" class="my-1" style="float: right; margin-right:5px" @click="setStageLiveIntensity(0)">Off</b-button>   
+                  <vue-slider v-model="stageLive.intensity" v-bind="intensitySliderOptions" @change="setStageLiveIntensity"></vue-slider>
+
+                </h4>
+                <h4>Speed {{stageLive.speedStr}}
+                  <b-button size="sm" class="my-1" style="float: right;" @click="setStageLiveSpeed(50)">1x</b-button>   
+                  <vue-slider v-model="stageLive.scaledSpeed" v-bind="intensitySliderOptions" min="0" max="100" interval="5" @change="setStageLiveSpeed"></vue-slider>
+                 </h4>
+
+                <h4>Transition {{stageLive.transitionDuration}}s.
+                    <b-dropdown size="sm" :text="stageLive.transitionFx" class="my-1">
+                      <b-dropdown-item-button v-for="item in transitionFxNames" :key="item.name" @click="setStageLiveTransitionFx(item)">{{item}}</b-dropdown-item-button>           
+                    </b-dropdown>
+
+                    <vue-slider v-model="stageLive.transitionDuration" max="5" marks="true" interval="0.2" v-bind="intensitySliderOptions" @change="setStageLiveTransitionDuration"></vue-slider>
+                           
+                </h4>
+                <h4>Color
+                  <!-- <div id="picker"></div> -->
+                  <div id="colorPicker"></div>
+                 
+                  <b-button :pressed.sync="showColorPicker" style="padding: 2px;" class="my-1"><span v-bind:style="stageLive.colorStr">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></b-button>   
+
+                     <sketch-picker v-if="showColorPicker" v-model="stageLive.color" @input="setStageLiveColor" :preset-colors="[ 
+    '#fff', '#f00', '#ff7f00', '#ff0', '#0f0', '#00ff7f', '#0ff', '#00f', '#7f00ff', '#f0f']"></sketch-picker>
+                </h4>               
+              </b-col>              
+
+              <b-col cols="12" sm="7" md="7" lg="7">
+                <!-- use the mixBlendMode: multiply to apply the stage color filter to the media preview  -->
+                <b-button :pressed.sync="showStageMonitor" variant="outline-primary" style="padding: 2px;" class="my-1">LED preview</b-button>
+                <div v-bind:style="stageLive.colorStr">
+                  <b-img blank-color="#111" :blank="showStageMonitor ? false : stageLive.image.monitorSrc==''" :src="showStageMonitor ? stageLive.monitorSrc: stageLive.image.monitorSrc" fluid-grow v-bind:style="{mixBlendMode: (showStageMonitor ? 'normal' : 'multiply')}" />
+                </div>
+                <h1 v-if="!showStageMonitor" style="position:absolute; padding:5px; min-width: 50px; text-align: center; bottom:0px; margin-bottom:0px; background-color: rgba(0,0,0,0.8);">{{stageLive.image.id}}</h1>   
+              </b-col>    
+            </b-row>
+<!-- media grid items - live -->
+            <b-row>
+              <b-col cols="3" sm="4" md="3" lg="2" v-for="item in images" :key="item.id">
+                <b-button @click="selectStageLiveMedia(item)" class="p-0 my-2 position-relative d-block text-none image-button">
+                  <!-- ID Overlay, changes color if selected -->
+                  <p class="overlay bottom-overlay" :class="{'selected-overlay': item.id === stageLive.image.id}">
+                    {{ item.name }}
+                  </p>
+                  <!-- Error Indicator -->
+                  <p v-if="item.hasErrors" class="overlay top-overlay" v-b-popover.hover="item.status">!</p>          
+                  <!-- Image with popover for details -->
+                  <b-img :src="item.src" fluid-grow blank-color="#bbb" :alt="item.name" :title="item.name" v-b-popover.hover="item.details"></b-img>
+                </b-button>
+              </b-col>
+            </b-row>
+          </b-container>
+
+      </b-container>
+
+      <b-container fluid class="p-2 bg-dark text-white" v-if="nav=='#patch'">
+          <b-alert variant="info" :show="stages.length==0">
+            No stages. Please create at least one stage in ELM.
+          </b-alert>
+        
+          <b-dropdown size="lg" :text="stage.name" class="m-2">
+            <b-dropdown-item-button v-for="item in stages" :key="item.name" @click="onStageSelected(item);refreshPatch()" >{{item.name}}</b-dropdown-item-button>
+          </b-dropdown>          
+        
+          <b-table striped hover small dark :items="patch" :fields="patchFields"></b-table>          
+
+          <b-alert variant="info" :show="stages.length>0 && patch.length==0">
+            The patch is empty. No strips patched yet.
+          </b-alert>   
+
+          <b-button  href="javascript:window.print()">save/print</b-button>
+
+      </b-container>
+
+       <b-container fluid class="p-2 bg-dark text-white" v-if="nav=='#remote'">
+         
+          <b-container fluid v-if="dmxRemote.isEnabled==1" class="p-0 bg-dark text-white">
+            <b-row>
+             <b-col cols="6" sm="4" md="3" lg="2" class="my-2">             
+                <div><h5>DMX input</h5>{{dmxRemote.mode}}</div>          
+            </b-col>
+             <b-col cols="6" sm="4" md="3" lg="2" class="my-2">
+                <div><h5>Universe</h5>{{dmxRemote.universe}}</div>
+            </b-col>
+            <b-col cols="6" sm="4" md="3" lg="2" class="my-2">
+               <div><h5>Address</h5>{{dmxRemote.address}}</div>
+            </b-col>
+            <b-col cols="6" sm="4" md="3" lg="2" class="my-2">
+               <div><h5>Fixture mode</h5>{{dmxRemote.fixtureMode}}</div>
+            </b-col>
+            <b-col cols="6" sm="4" md="3" lg="2" class="my-2">
+               <div><h5>Value mode</h5>{{dmxRemote.valueMode}}</div>
+            </b-col>
+          </b-row>
+          <b-table striped hover small dark :items="dmxRemote.channels" :fields="dmxRemoteFields"></b-table>          
+        </b-container>    
+
+        <b-container fluid class="p-2 bg-dark text-white" v-if="dmxRemote.isEnabled==0">
+          <b-row>
+             <b-col cols="6" sm="4" md="3" lg="2" class="my-2">             
+                <div><h5>DMX input</h5>None</div>          
+            </b-col>         
+          </b-row>
+        </b-container>
+
+        <b-container fluid class="p-2 bg-dark text-white" v-if="oscRemote.isEnabled==1">
+            <b-row>
+             <b-col cols="6" sm="4" md="3" lg="2" class="my-2">             
+                <div><h5>OSC</h5>On</div>          
+            </b-col>
+             <b-col cols="6" sm="4" md="3" lg="2" class="my-2">
+                <div><h5>Port</h5>{{oscRemote.port}}</div>
+            </b-col>            
+          </b-row>     
+          <pre>{{oscRemote.description}}</pre>
+        </b-container>
+
+        <b-container fluid class="p-2 bg-dark text-white" v-if="oscRemote.isEnabled==0">
+          <b-row>
+             <b-col cols="6" sm="4" md="3" lg="2" class="my-2">             
+                <div><h5>OSC</h5>Off</div>          
+            </b-col>         
+          </b-row>
+        </b-container>
+
+        <b-container fluid class="p-2 bg-dark text-white" v-if="httpRemote.isEnabled==1">
+          <h5>HTTP</h5>     
+          <pre>{{httpRemote.description}}</pre>
+        </b-container>
+        <b-button  href="javascript:window.print()">save/print</b-button>
+      </b-container>
+
+    </div>
+
+    <!-- Start running your app -->
+    <script>
+      
+      // update where we are when the user or the browser change the hash (#menuItem) in the url
+      function onHashChanged()  {
+        window.app.refreshFromMenu();
+      }
+
+      window.addEventListener("hashchange", onHashChanged, false);
+      var colorSlider = VueColor.Slider;
+      var sketchPicker = VueColor.Sketch;
+
+      function requestFullscreen() {
+        var docElm = document.documentElement;
+        if (docElm.requestFullscreen) {
+            docElm.requestFullscreen();
+        }
+        else if (docElm.mozRequestFullScreen) {
+            docElm.mozRequestFullScreen();
+        }
+        else if (docElm.webkitRequestFullScreen) {
+            docElm.webkitRequestFullScreen();
+        }
+        else if (docElm.msRequestFullscreen) {
+            docElm.msRequestFullscreen();
+        }  
+      }      
+
+      function exitFullscreen() {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        }
+        else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+        }
+        else if (document.webkitCancelFullScreen) {
+            document.webkitCancelFullScreen();
+        }
+        else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+        }
+      }
+   
+      window.app = new Vue({        
+        el: "#app",
+              
+        components: {
+          'slider-picker': colorSlider,      
+          'sketch-picker': sketchPicker,
+          'vue-slider': window[ 'vue-slider-component' ]
+        },
+        
+        data: {
+          minELMVersion: 528,
+          wrongELMVersion: false,
+          isConnected: false,
+          unableToConnect: false,
+          needToRefresh: false,
+          unauthorized: false,
+          slowTimer: '',
+          normalTimer: '',
+          fastTimer: '',
+
+          isWorking: false,
+          dismissSecs: 10,
+          successDismissCountDown: 0,
+          errorDismissCountDown: 0,
+          errorMessage: "",
+          successMessage: "",
+          isUploadMediaFileModalVisible: false,
+          uploadMediaFileProgress: 0,
+          
+          showEmptySlots: false,
+          applyToAllStages: false,
+
+          intensitySliderOptions: {
+            dotSize: 14,
+            width: 'auto',
+            height: 10,
+            contained: false,
+            direction: 'ltr',
+            data: null,
+            min: 0,
+            max: 1,
+            interval: 0.01,
+            disabled: false,
+            clickable: true,
+            duration: 0,
+            adsorb: false,
+            lazy: false,
+            tooltip: 'none',
+            tooltipPlacement: 'top',
+            tooltipFormatter: void 0,
+            useKeyboard: false,
+            enableCross: true,
+            fixed: false,
+            minRange: void 0,
+            maxRange: void 0,
+            order: true,
+            marks: false,
+            dotOptions: void 0,
+            process: true,
+            dotStyle: void 0,
+            railStyle: void 0,
+            processStyle: void 0,
+            tooltipStyle: void 0,
+            stepStyle: void 0,
+            stepActiveStyle: void 0,
+            labelStyle: void 0,
+            labelActiveStyle: void 0,
+          },
+        
+          showColorPicker: true,
+          showStageMonitor: true,
+
+          nav:"#home",
+          status,
+          stage: "",   
+          transitionFxNames: [],
+          stageLive: {},   
+          stagePlaylists: {},  
+          schedulerTime: "",
+          patchFields: [
+            {
+              key: 'group',              
+            },
+            {
+              key: 'sGroup',
+              label: 'Sub-Group',              
+            },
+            {
+              key: 'leds'              
+            },
+            {
+              key: 'ledType',
+              label: 'LED type',              
+            },
+            {
+              key: 'protocol',              
+            },
+            {
+              key: 'start',
+              label: 'DMX start',              
+            },
+            {
+              key: 'end'              
+            },
+
+          ],
+          patch: [],  
+
+          dmxRemoteFields: [
+            {
+              key: 'address',              
+            },
+            {
+              key: 'value',              
+            },
+            {
+              key: 'desc',
+              label: 'Description',                            
+            },
+
+          ],
+
+          liveColors: { h: 150, s: 1.0, v: 1.0 },
+
+          dmxRemote: {isEnabled: 0},
+          oscRemote: {isEnabled: 0, port: 9001, description: ''},
+          httpRemote: {isEnabled: 0, description: ''},
+          selectedMedia: "",
+          mediaFile: "",
+
+          menuItems: [
+            {text: "status", isSelected: true, href: "#home" },
+            {text: "media", isSelected: false, href:"#media"  },
+            {text: "playlists", isSelected: false, href:"#playlists"  },
+            {text: "live", isSelected: false, href:"#live"  },
+            {text: "patch", isSelected: false, href:"#patch"  },
+            {text: "remote", isSelected: false, href:"#remote"  }
+          ],
+          stages: [],
+          images: [],
+         
+        },      
+        
+        mounted:function() {
+          this.refreshFromMenu();    
+          this.refreshStatus();  
+
+          // Initialize iro.js color picker
+          // this.initializeColorPicker();
+          // this.$nextTick(() => {
+          //   this.initializeColorPicker();
+          // });
+
+          this.slowTimer = setInterval(this.onSlowTimer, 3*1000);
+          this.normalTimer = setInterval(this.onNormalTimer, 1*1000);
+          this.fastTimer = setInterval(this.onFastTimer, 200);
+        },
+
+        methods: {
+
+            initializeColorPicker: function() {
+              var colorPickerElement = document.getElementById('colorPicker'); // Ensure you have a div with this ID in your HTML
+              if (!colorPickerElement) {
+                console.warn('Color picker element not found');
+                return;
+              }
+
+              this.colorPicker = new iro.ColorPicker(colorPickerElement, {
+                width: 220,
+                layout: [
+                  {
+                    component: iro.ui.Wheel,
+                    options: {}
+                  }
+                ]
+              });
+
+              // Listen to color changes
+              this.colorPicker.on('color:change', (color) => {
+                // Extract RGB components from the color object
+                const rgb = color.rgb; // iro.js provides the RGB values directly in the color object
+                console.log(rgb);
+                // Create the data object expected by your existing function
+                const data = {
+                  rgba: {
+                    r: rgb.r,
+                    g: rgb.g,
+                    b: rgb.b
+                  }
+                };
+
+                // Update stageLive.color and call setStageLiveColor
+                this.stageLive.color = color.hexString; // Update Vue data property if necessary
+                this.setStageLiveColor(data);
+              });
+            },
+
+            
+    
+
+            // Utility function to convert hex to RGB
+            hexToRgb: function(hex) {
+              let r = 0, g = 0, b = 0;
+              // 3 digits
+              if (hex.length === 4) {
+                r = parseInt(hex[1] + hex[1], 16);
+                g = parseInt(hex[2] + hex[2], 16);
+                b = parseInt(hex[3] + hex[3], 16);
+              }
+              // 6 digits
+              else if (hex.length === 7) {
+                r = parseInt(hex[1] + hex[2], 16);
+                g = parseInt(hex[3] + hex[4], 16);
+                b = parseInt(hex[5] + hex[6], 16);
+              }
+              return { r, g, b };
+            },
+
+
+            onEnter: function() {
+              var that = this;
+              switch(this.nav)
+              {
+                case "#home":
+                  this.refreshStatus();
+                  break;
+                case "#media":
+                  this.refreshMedia();
+                  break;
+                case "#media-edit":
+                  this.refreshMedia();
+                  break;
+                case "#playlists":
+                  this.refreshStages(function(){that.refreshStagePlaylists();});                  
+                  break;                  
+                case "#live":
+                  this.refreshStages(function(){that.refreshMedia();});                  
+                  break;
+                case "#patch":
+                  this.refreshStages(function(){that.refreshPatch();});                                    
+                  break;
+                case "#remote":
+                  this.refreshRemote();                                    
+                  break;
+                default:
+                break;
+              }
+            },
+
+            onSlowTimer: function() {
+              
+
+              switch(this.nav)
+              {
+                case "#media":
+                  this.refreshMedia();
+                  break;          
+                case "#media-edit":
+                  this.refreshMedia();
+                  break;           
+                case "#live":
+                  this.refreshMedia();                  
+                  break;             
+                case "#remote":
+                  this.refreshRemote();                                    
+                  break;                    
+                default:
+                  this.apiGet("heartbeat", function(){});
+                break;
+              }
+
+              
+              if(this.stages.length==0) this.refreshStages();
+            },
+            
+            
+
+           
+
+            onNormalTimer: function() {
+              if (!this.colorPicker) {
+                this.initializeColorPicker();
+              }
+              switch(this.nav)
+              {
+                case "#home":
+                  this.refreshStatus();
+                  break;
+                case "#playlists":
+                  this.refreshStagePlaylists();                  
+                  break;                  
+                case "#live":                  
+                  break;                  
+                default:
+                
+                break;
+              }
+            },
+
+            onFastTimer: function() {
+              switch(this.nav)
+              {
+                case "#live":
+                  this.refreshStageLive();
+                  break;                  
+                default:
+                
+                break;
+              }
+            },
+
+            selectFileForMedia: function(media) {
+              this.selectedMedia = media;
+              this.uploadMediaFileProgress = 0; 
+              this.isUploadMediaFileModalVisible = true;
+            },
+
+            refreshFromMenu: function(menuItem) {
+              var that = this;
+              this.nav = menuItem || window.location.hash;
+              var menuSelected;
+              this.menuItems.forEach(function(e) {
+                  e.isSelected =  that.nav.indexOf(e.href) != -1;
+                  if(e.isSelected) menuSelected = e;
+              });
+
+              if(typeof(menuSelected) === "undefined")
+              {
+                menuSelected = this.menuItems[0];
+                this.nav = menuSelected.href;
+                menuSelected.isSelected = true;
+              }
+
+              this.onEnter();
+            },         
+
+            urlFor : function(route) {              
+              return "../"+route;
+            },
+
+            onMenuItemClicked: function(evt) {              
+                
+            },
+
+            onStageSelected: function(stage) {              
+                this.stage = stage;
+                this.refreshStageLive();
+            },
+
+            getStageNameForPlaylists: function() {
+              if(this.applyToAllStages)
+              {
+                return "*";
+              }
+              else
+              {
+                return this.stage.id;
+              }
+            },      
+
+            setStageLiveColor: function(data) {
+                this.apiPost("stages/"+this.stage.id+"/live?red="+(data.rgba.r)+"&green="+(data.rgba.g)+"&blue="+(data.rgba.b), function(){}.bind(this));
+            },     
+
+            selectStageLiveMedia: function(image) {
+                this.apiPost("stages/"+this.stage.id+"/live?media="+(image.id), function(){}.bind(this));
+            },
+
+            setStageLiveIntensity: function(value) {              
+              this.apiPost("stages/"+this.stage.id+"/live?intensity="+value, function(){}.bind(this));
+            },
+
+            setStageLiveTransitionDuration: function(value) {              
+              this.apiPost("stages/"+this.stage.id+"/live?transitionDuration="+value, function(){}.bind(this));
+            },   
+
+            setStageLiveTransitionFx: function(value) {              
+              this.apiPost("stages/"+this.stage.id+"/live?transitionFx="+value, function(){}.bind(this));
+            },
+
+            setStageLiveSpeed: function(value) {                            
+              this.apiPost("stages/"+this.stage.id+"/live?speed="+this.scaleSpeed(value), function(){}.bind(this));
+            },            
+
+            onPlaylistPrevious: function(playlist) {
+                this.setPlaylistCurItemIndex(playlist, playlist.curItemIndex-1);
+            },
+
+            onPlaylistNext: function(playlist) {              
+              this.setPlaylistCurItemIndex(playlist, playlist.curItemIndex+1);
+            },     
+
+            setPlaylistCurItemIndex: function(playlist, curItemIndex) {
+                if(curItemIndex < 0 )curItemIndex = playlist.nbItems-1;
+                if(curItemIndex >= playlist.nbItems) curItemIndex = 0;
+                this.apiPost("stages/"+this.getStageNameForPlaylists()+"/scheduler/playlists/"+playlist.name+"?curItemIndex="+(curItemIndex), function(){this.refreshStagePlaylists();}.bind(this));
+            },  
+
+            onPlaylistStart: function(playlist) {
+              this.apiPost("stages/"+this.getStageNameForPlaylists()+"/scheduler/playlists/"+playlist.name+"?running=1",  function(){this.refreshStagePlaylists();}.bind(this));
+            },
+
+            onSchedulerStop: function() {
+              this.apiPost("stages/"+this.getStageNameForPlaylists()+"/scheduler?running=0", function(){this.refreshStagePlaylists();}.bind(this));
+            },
+
+            onSchedulerStart: function() {
+              this.apiPost("stages/"+this.getStageNameForPlaylists()+"/scheduler?running=1", function(){this.refreshStagePlaylists();}.bind(this));
+            },
+
+            apiGet: function(route, successCallback) {
+              
+              this.$http.get(this.urlFor(route)).then( function(result) {
+                this.unableToConnect = false;
+                this.unauthorized=false;   
+                this.isConnected = true;                       
+                successCallback(result.body);  
+
+                }, function(error)  {                  
+                    if(error.status==404)
+                    {
+                      this.needToRefresh = true;
+                    }
+                    else if(error.status==401)
+                    {
+                      this.unauthorized=true;   
+                    }
+                    else
+                    {
+                      this.unableToConnect=true;  
+                    }                    
+                });
+            },
+
+            apiPost: function(route, successCallback) {
+              
+              this.$http.post(this.urlFor(route)).then( function(result) {               
+                  if(typeof(successCallback) !== "undefined") successCallback(result);
+                }, function(error)  {                  
+                    if(error.status==404)
+                    {
+                      this.needToRefresh = true;
+                    }
+                    else if(error.status==401)
+                    {
+                      this.unauthorized=true;   
+                    }
+                    else if(error.status==423)
+                    {
+                      // locked
+                      this.errorMessage = "Control locked by another remote.";
+                      this.errorDismissCountDown = 3;
+                    }
+                    else
+                    {
+                      this.unableToConnect=true;  
+                    }                    
+                });
+            },
+
+            postMediaFile: function(evt) {              
+              evt.preventDefault();
+              if(this.mediaFile == "") return;
+
+              var formData = new FormData();
+              var that = this;
+              formData.append('image', this.mediaFile);   
+              this.isWorking = true;
+              this.$http.post('../media/slots/'+this.selectedMedia.id,formData, {
+                progress(e){
+                  
+                  if(e.lengthComputable) {
+                      that.uploadMediaFileProgress = e.loaded / e.total * 100;
+                  }
+                  else
+                  {
+                      that.uploadMediaFileProgress = 100; 
+                  }
+                }
+
+              }).then( function(response){ 
+                  that.isWorking = false;  
+                  that.isUploadMediaFileModalVisible = false;    
+                  that.successMessage = "Transfer complete.";
+                  that.successDismissCountDown = 3;
+                  that.refreshMedia();
+
+              }, function (response) {                
+                    this.isWorking = false;
+                    that.isUploadMediaFileModalVisible = false;
+                    that.errorMessage = "Unable to transfer the file. "+response.statusText + " ("+response.status+")";
+                    that.errorDismissCountDown = 10;
+              });
+            },
+
+            refreshStatus: function() {              
+              this.apiGet("status", function(body){
+                this.status = body;
+                if(this.status.appVersion < this.minELMVersion)
+                {
+                  this.wrongELMVersion = true;
+                }
+              }.bind(this)); 
+            },
+
+            refreshMedia: function() {
+              var that=this;
+              this.apiGet("media/slots?includestate=1", function(body){
+                  that.images=body.slots.map(function(i){ return {id: i.id, name: i.name, status: i.status, hasErrors: i.status !== "", details: that.formatMediaDetail(i), monitorSrc: that.urlFor("media/slots/"+i.id+"/monitor?width=256&height=256&fps=15"),  src: that.urlFor("media/slots/"+i.id+"/thumbnail?width=256&height=256&v="+i.thumbnailETag)};});
+                  that.imagesWithEmptySlots = [];
+                  var i;
+                  for(i=1; i<=255; i++) {
+                    var filledSlot = that.getImageByid(i);
+                    that.imagesWithEmptySlots.push(filledSlot);
+                  }
+              });             
+            },
+
+            refreshStages: function(onSuccess) {
+              var that=this;
+              this.apiGet("stages?includestate=1", function(body){
+                
+                  that.stages=body.stages.map(function(i){ return {name: i.name, id: i.id, width: i.width, height: i.height}});
+                  if(typeof(that.stage.name)=== "undefined" && that.stages.length > 0){
+                    that.getTranstionEffects();
+                    that.onStageSelected(that.stages[0]);
+                  } 
+                  if(typeof(onSuccess) !== 'undefined') onSuccess();
+              }); 
+            },
+
+            getTranstionEffects: function() {
+              var that=this;
+              this.apiGet("stages/transitionFxNames", function(body){
+                  that.transitionFxNames=body.names
+              }); 
+            },
+
+            refreshStageLive: function() {
+              if(typeof(this.stage.name) === "undefined") return;
+
+              var that=this;
+              this.apiGet("stages/"+this.stage.id+"/live", function(body){
+                  var image = that.getImageByid(body.media);
+                  body.image = image;                  
+                  body.intensityStr = parseInt(body.intensity * 100,10)+"%";
+                  body.speedStr = (parseInt(body.speed * 10,10)/10)+"x";
+                  body.scaledSpeed = that.getScaledSpeed(body.speed);
+                  body.colorStr="backgroundColor:rgb("+body.red+","+body.green+","+body.blue+")";
+                  body.color = {r: body.red, g: body.green, b:body.blue};
+                  body.monitorSrc = that.urlFor("stages/"+that.stage.id+"/monitor?width=300&height=300&fps=15");
+                  
+                  var mode = "";
+                  if(body.schedulerControlled==1) mode = "Under scheduler control";
+                  if(body.audioMixControlled==1) mode = "Under audio mix control";
+                  if(body.remotelyControlled==1) mode = "Under remote control";
+                  if(body.testingMode==1) mode = "The testing mode is active";
+                  body.mode = mode;
+
+                  that.stageLive=body;
+              }); 
+            },
+
+            refreshStagePlaylists: function() {
+              if(typeof(this.stage.name) === "undefined") return;
+
+              var that=this;
+              this.apiGet("stages/"+this.stage.id+"/scheduler/playlists?includeState=1", function(body){
+                  that.stagePlaylists=body.playlists;
+                  that.schedulerTime = body.timeStr;
+              });             
+            },
+
+            refreshPatch: function() {
+              if(typeof(this.stage.name) === "undefined") return;
+
+              var that=this;
+              this.apiGet("stages/"+this.stage.id+"/patch", function(body){
+                  that.patch=body.fixtures;
+              });             
+            },
+
+            refreshRemote: function() {
+              var that=this;
+              this.apiGet("remote/dmx", function(body){
+                  that.dmxRemote=body;
+              });             
+
+              this.apiGet("remote/osc", function(body){
+                  that.oscRemote=body;
+              });
+
+              this.apiGet("remote/http", function(body){
+                  that.httpRemote=body;
+              });             
+            },
+
+            getImageByid: function(id) {
+              var image = {src: "", monitorSrc: "", id: id, name:"", hasErrors: false};
+              this.images.forEach(function(e) {
+                 if(e.id == id){image=e;}
+              });
+
+              return image;
+            },
+
+            formatMediaDetail: function(media) {
+                var resolution = media.width != 0 ? media.width + "x" + media.height : "";
+                var type = media.type == "glsl" || media.type == "animation" ? "effect" : media.type;
+                var duration = media.duration > 0 ? media.durationStr : "";                
+                return type + " " + resolution + " " + duration;
+            },
+
+            formatDuration : function(sec_num) {
+                sec_num = parseInt(sec_num, 10);
+                var hours   = Math.floor(sec_num / 3600);
+                var minutes = Math.floor((sec_num - (hours * 3600)) / 60);
+                var seconds = sec_num - (hours * 3600) - (minutes * 60);
+
+                if (hours   < 10) {hours   = "0"+hours;}
+                if (minutes < 10) {minutes = "0"+minutes;}
+                if (seconds < 10) {seconds = "0"+seconds;}
+                return hours+':'+minutes+':'+seconds;
+            },
+
+            getScaledSpeed: function(speed){
+              if (speed > 1)
+              {
+                  return this.scale(speed, 1, 10.0, 50, 100);
+              }
+              else
+              {
+                  return this.scale(speed, 0, 1, 0, 50);
+              }        
+            },
+
+            scaleSpeed: function(speed) {
+              if(speed > 50)
+              {
+                  return this.scale(speed, 50, 100, 1, 10.0);
+              }
+              else
+              {
+                  return this.scale(speed, 0, 50, 0, 1);
+              }
+            },
+
+            scale: function(value, min, max, toMin, toMax){
+                return (this.restrainValue(value, min, max) - min) / (max - min) * (toMax - toMin) + toMin;
+            },
+
+            restrainValue: function(value, min, max) {
+              if (value < min)
+              {
+                  return min;
+              }
+              else if (value > max)
+              {
+                  return max;
+              }
+              else
+              {
+                  return value;
+              }
+            },
+        }
+      })
+      
+    </script>
+
+  </body>
+</html>
